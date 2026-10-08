@@ -1,4 +1,4 @@
-# pr_review.nvim
+# pr-nvim
 
 Review GitHub pull requests from Neovim: flip between before/after/diff views,
 leave line comments on visual selections, keep your progress in a local draft,
@@ -19,11 +19,13 @@ lazy.nvim:
 
 ```lua
 {
-  dir = "~/projects/pr_review", -- or the GitHub path once pushed
+  "MikeWelsh801/pr-nvim",
   cmd = "PRReview",
   opts = {}, -- see Configuration
 }
 ```
+
+packer / vim-plug: `use "MikeWelsh801/pr-nvim"` / `Plug 'MikeWelsh801/pr-nvim'`.
 
 Any plugin manager works; call `require("pr_review").setup({})` once if you
 want to change defaults (setup is optional).
