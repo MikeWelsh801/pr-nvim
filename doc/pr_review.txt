@@ -1,0 +1,23 @@
+*pr_review.txt*  Review GitHub pull requests in Neovim
+
+Requires the GitHub CLI (`gh`), logged in.  See README.md for the full
+reference.
+
+COMMANDS                                                *:PRReview*
+
+:PRReview open [n|url]   Open a PR (default: the current branch's PR).
+:PRReview resume         Pick a saved draft to continue.
+:PRReview files          Toggle the files panel.
+:PRReview comments       Toggle the comment list.
+:PRReview submit         Submit as approve / comment / request changes.
+:PRReview discard        Delete the saved draft for the open PR.
+:PRReview close          Close the review (progress is saved).
+
+KEYS (review buffers)                                   *pr_review-keys*
+
+<Tab>  before/after    gd diff    gs split    gb before    ga after
+]f [f  files           ]c [c hunks
+gc     comment on line / selection (edit if one exists)
+gl     comment list    -  files panel    gm viewed    gS submit    g? help
+
+vim:tw=78:ts=8:ft=help:norl:
