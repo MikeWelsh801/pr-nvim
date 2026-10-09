@@ -36,13 +36,16 @@ end
 
 --- Fetch PR metadata. `spec` may be a number, branch, URL, or nil (current branch).
 function M.pr_meta(spec)
+  if vim.fn.executable(cfg().gh_cmd) == 0 then
+    fail("GitHub CLI not found", "'" .. cfg().gh_cmd .. "' is not executable; install gh (https://cli.github.com) and run `gh auth login`")
+  end
   local args = { "pr", "view" }
   if spec and spec ~= "" then
     table.insert(args, spec)
   end
   vim.list_extend(args, {
     "--json",
-    "number,title,url,headRefOid,baseRefOid,headRefName,baseRefName,author,state,isDraft",
+    "number,title,url,headRefOid,headRefName,baseRefName,author,state,isDraft",
   })
   local ok, out, err = gh(args)
   if not ok then
@@ -60,22 +63,37 @@ function M.pr_meta(spec)
     title = j.title,
     url = j.url,
     head_sha = j.headRefOid,
-    base_sha = j.baseRefOid,
+    base_sha = nil,
     head_ref = j.headRefName,
     base_ref = j.baseRefName,
     author = j.author and j.author.login or "?",
     state = j.state,
     is_draft = j.isDraft,
   }
+  local okv, outv = gh({ "api", "user", "--jq", ".login" })
+  if okv then
+    meta.viewer = vim.trim(outv)
+  end
   -- The PR diff is computed against the merge base, not the base branch tip.
   local ok2, out2 = gh({
     "api",
-    string.format("repos/%s/%s/compare/%s...%s", owner, repo, j.baseRefOid, j.headRefOid),
+    string.format("repos/%s/%s/compare/%s...%s", owner, repo, j.baseRefName, j.headRefOid),
     "--jq",
     ".merge_base_commit.sha",
   })
-  if ok2 and vim.trim(out2) ~= "" then
+  if ok2 and vim.trim(out2):match("^%x+$") then
     meta.base_sha = vim.trim(out2)
+  else
+    local ok3, out3, err3 = gh({
+      "api",
+      string.format("repos/%s/%s/pulls/%d", owner, repo, j.number),
+      "--jq",
+      ".base.sha",
+    })
+    if not ok3 then
+      fail("fetching PR base commit failed", err3)
+    end
+    meta.base_sha = vim.trim(out3)
   end
   return meta
 end

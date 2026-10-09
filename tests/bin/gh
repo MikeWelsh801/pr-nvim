@@ -6,7 +6,7 @@ case "$1 $2" in
   "api "*)
     shift
     args=("$@")
-    if [[ "${args[*]}" == *"compare/"* ]]; then echo "base000000000000000000000000000000000000"; exit 0; fi
+    if [[ "${args[*]}" == *"compare/"* ]]; then echo "ba5e000000000000000000000000000000000000"; exit 0; fi
     if [[ "${args[*]}" == *"/files?"* ]]; then cat "$F/files.json"; exit 0; fi
     if [[ "${args[*]}" == *"/contents/"* ]]; then
       path=$(printf '%s\n' "${args[@]}" | grep '/contents/' | sed -E 's#.*/contents/([^?]*)\?ref=([a-z0-9]+)#\1 \2#')

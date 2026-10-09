@@ -116,7 +116,7 @@ function M.get_buf(file, kind)
   b = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_name(b, string.format("prreview://%s/%s", kind, file.filename))
   set_lines(b, lines)
-  vim.bo[b].buftype = "nofile"
+  vim.bo[b].buftype = "acwrite"
   vim.bo[b].bufhidden = "hide"
   vim.bo[b].swapfile = false
   vim.bo[b].modifiable = false
@@ -511,7 +511,7 @@ function M.open_panel()
   if not (s.panel_buf and vim.api.nvim_buf_is_valid(s.panel_buf)) then
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_name(buf, "prreview://files")
-    vim.bo[buf].buftype = "nofile"
+    vim.bo[buf].buftype = "acwrite"
     vim.bo[buf].bufhidden = "hide"
     vim.bo[buf].swapfile = false
     vim.bo[buf].modifiable = false
@@ -593,6 +593,11 @@ function M.apply_keymaps(buf)
     comments.add_range(r, r)
   end, "comment on line")
   map("x", km.comment, ":<C-u>lua require('pr_review.comments').add_range(vim.fn.line(\"'<\"), vim.fn.line(\"'>\"))<CR>", "comment on selection")
+  map("n", km.suggest, function()
+    local r = vim.api.nvim_win_get_cursor(0)[1]
+    comments.add_range(r, r, true)
+  end, "suggest change on line")
+  map("x", km.suggest, ":<C-u>lua require('pr_review.comments').add_range(vim.fn.line(\"'<\"), vim.fn.line(\"'>\"), true)<CR>", "suggest change on selection")
   map("n", km.list_comments, comments.toggle_list, "list comments")
   map("n", km.files, M.toggle_panel, "files panel")
   map("n", km.toggle_viewed, function() M.toggle_viewed() end, "toggle viewed")
@@ -612,6 +617,7 @@ function M.help()
     { km.next_file .. " / " .. km.prev_file, "next / previous file" },
     { km.next_hunk .. " / " .. km.prev_hunk, "next / previous hunk" },
     { km.comment, "comment: line (normal) or selection (visual); on an existing comment: edit" },
+    { km.suggest, "suggestion: like comment, pre-filled with a ```suggestion block to edit" },
     { km.list_comments, "list comments (jump / edit / delete)" },
     { km.files, "toggle files panel" },
     { km.toggle_viewed, "toggle file viewed" },
@@ -695,6 +701,13 @@ function M.open(spec)
   end
 
   M.session.augroup = vim.api.nvim_create_augroup("pr_review_session", { clear = true })
+  vim.api.nvim_create_autocmd("BufWriteCmd", {
+    group = M.session.augroup,
+    pattern = { "prreview://diff/*", "prreview://before/*", "prreview://after/*", "prreview://files", "prreview://comments" },
+    callback = function()
+      notify("Nothing to write: review buffers are read-only and drafts save automatically")
+    end,
+  })
   vim.api.nvim_create_autocmd("VimLeavePre", {
     group = M.session.augroup,
     callback = function()
