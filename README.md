@@ -1,4 +1,4 @@
-# pr_review.nvim
+# pr-nvim
 
 Review GitHub pull requests from Neovim: flip between before/after/diff views,
 leave line comments on visual selections, keep your progress in a local draft,
@@ -19,11 +19,13 @@ lazy.nvim:
 
 ```lua
 {
-  dir = "~/projects/pr_review", -- or the GitHub path once pushed
+  "MikeWelsh801/pr-nvim",
   cmd = "PRReview",
   opts = {}, -- see Configuration
 }
 ```
+
+packer / vim-plug: `use "MikeWelsh801/pr-nvim"` / `Plug 'MikeWelsh801/pr-nvim'`.
 
 Any plugin manager works; call `require("pr_review").setup({})` once if you
 want to change defaults (setup is optional).
@@ -58,6 +60,7 @@ in your window. The diff view shows old/new line numbers inline.
 | `]c` `[c`  | Next / previous hunk                                                |
 | `gc`       | Comment on the current line, or edit the comment already there      |
 | `gc` (visual) | Comment on the selected lines                                    |
+| `gC`       | Suggestion: comment pre-filled with a ```` ```suggestion ```` block holding the line(s), edit the code in place |
 | `gl`       | Comment list: `<CR>` jump, `e` edit, `dd` delete, `q` close          |
 | `-`        | Toggle files panel (`<CR>` opens a file, `gm` marks viewed)          |
 | `gm`       | Toggle "viewed" for the current file                                |
@@ -77,6 +80,12 @@ virtual text. Comments made in the "before" view attach to the old side of the
 diff, comments in "after" or in the unified diff attach to the new side (deleted
 lines map to the old side automatically).
 
+`gC` (line or visual selection) creates a GitHub **suggestion**: the editor opens
+with the selected lines inside a ```` ```suggestion ```` block, you edit the code,
+and the PR author gets a one-click "Apply suggestion". Suggestions can only
+target lines on the new side, so use the after view or non-deleted diff lines.
+You can also type a suggestion block by hand inside any comment.
+
 GitHub only accepts comments on lines that are part of the diff. Comments
 outside a hunk are allowed locally but flagged `[outside diff!]` in the list and
 in the submit confirmation.
@@ -85,7 +94,8 @@ in the submit confirmation.
 
 `gS` (or `:PRReview submit`) asks for Approve / Comment / Request changes, opens
 an editor for the review summary, and then asks for confirmation before posting
-everything in one review. On success the local draft is deleted. On failure
+everything in one review. On your own PR only "Comment" is offered, because
+GitHub rejects approve / request-changes from the author. On success the local draft is deleted. On failure
 GitHub's error is shown and the draft is kept, so you can fix and retry.
 
 ### Leaving and coming back
@@ -112,7 +122,7 @@ require("pr_review").setup({
     toggle_side = "<Tab>", view_diff = "gd", view_split = "gs",
     view_before = "gb", view_after = "ga",
     next_file = "]f", prev_file = "[f", next_hunk = "]c", prev_hunk = "[c",
-    comment = "gc", list_comments = "gl", files = "-", toggle_viewed = "gm",
+    comment = "gc", suggest = "gC", list_comments = "gl", files = "-", toggle_viewed = "gm",
     submit = "gS", help = "g?", close = "q",
   },
 })

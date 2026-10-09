@@ -39,7 +39,7 @@ end
 -- Editor (floating markdown buffer)
 -- ---------------------------------------------------------------------------
 
---- opts: { title, body, on_save(body), on_close(saved_body) }
+--- opts: { title, body, cursor, on_save(body), on_close(saved_body) }
 --- :w / <C-s> saves, q closes (asks if unsaved), :wq saves and closes.
 function M.open_editor(opts)
   editor_seq = editor_seq + 1
@@ -117,7 +117,9 @@ function M.open_editor(opts)
     save()
     vim.cmd("stopinsert")
   end, { buffer = buf })
-  if body == "" then
+  if opts.cursor then
+    pcall(vim.api.nvim_win_set_cursor, win, opts.cursor)
+  elseif body == "" then
     vim.cmd("startinsert")
   end
   return buf, win
@@ -167,7 +169,8 @@ function M.after_change()
 end
 
 --- Comment on buffer rows [s, e] of the current review buffer.
-function M.add_range(s, e)
+--- With `suggest`, pre-fill a ```suggestion block with the lines' current content.
+function M.add_range(s, e, suggest)
   local sess = view().require_session()
   if not sess then
     return
@@ -178,17 +181,28 @@ function M.add_range(s, e)
     notify("No diff lines in the selection", vim.log.levels.WARN)
     return
   end
-  if s == e then
+  if s == e and not suggest then
     local existing = M.find_at(loc.path, loc.side, loc.line)
     if existing then
       return M.edit(existing)
     end
   end
   local _, file = view().file_index(loc.path)
+  local body = ""
+  if suggest then
+    if loc.side ~= "RIGHT" or loc.start_side ~= "RIGHT" then
+      notify("Suggestions can only target lines on the new (after) side", vim.log.levels.WARN)
+      return
+    end
+    local after = view().get_buf(file, "after")
+    local code = vim.api.nvim_buf_get_lines(after, loc.start_line - 1, loc.line, false)
+    body = "```suggestion\n" .. table.concat(code, "\n") .. "\n```"
+  end
   local outside = not diff.in_hunk(view().parsed(file), loc.side, loc.line)
   M.open_editor({
-    title = "New comment " .. location_label(loc) .. (outside and " [outside diff]" or ""),
-    body = "",
+    title = (suggest and "New suggestion " or "New comment ") .. location_label(loc) .. (outside and " [outside diff]" or ""),
+    body = body,
+    cursor = suggest and { 2, 0 } or nil,
     on_save = function(body)
       if vim.trim(body) == "" then
         error("empty comment not saved", 0)
@@ -383,7 +397,7 @@ function M.toggle_list()
   if not (s.list_buf and vim.api.nvim_buf_is_valid(s.list_buf)) then
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_name(buf, "prreview://comments")
-    vim.bo[buf].buftype = "nofile"
+    vim.bo[buf].buftype = "acwrite"
     vim.bo[buf].bufhidden = "hide"
     vim.bo[buf].swapfile = false
     vim.bo[buf].filetype = "prreview_comments"

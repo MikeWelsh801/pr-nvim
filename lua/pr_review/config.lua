@@ -18,6 +18,7 @@ local defaults = {
     next_hunk = "]c",
     prev_hunk = "[c",
     comment = "gc", -- normal: current line (or edit existing); visual: selection
+    suggest = "gC", -- like comment, but pre-filled with a ```suggestion block
     list_comments = "gl",
     files = "-", -- toggle files panel
     toggle_viewed = "gm",

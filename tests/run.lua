@@ -13,7 +13,7 @@ local submit = require("pr_review.submit")
 view.open("7")
 local s = assert(view.session, "session opened")
 eq(#s.files, 3, "file count")
-eq(s.meta.base_sha, "base000000000000000000000000000000000000", "merge base used")
+eq(s.meta.base_sha, "ba5e000000000000000000000000000000000000", "merge base used")
 eq(s.mode, "diff", "initial mode")
 local dbuf = vim.api.nvim_get_current_buf()
 eq(vim.b[dbuf].pr_review.kind, "diff", "diff buffer current")
@@ -49,6 +49,17 @@ eq(s.draft.comments[2].line, 4, "left line")
 comments.add_range(4, 4)
 eq(vim.api.nvim_buf_get_lines(0, 0, -1, false), { "old impl" }, "edit opens existing body")
 vim.cmd("q")
+
+-- suggestion on after-side lines 4-5
+view.set_mode("after")
+comments.add_range(4, 5, true)
+eq(vim.api.nvim_buf_get_lines(0, 0, -1, false), { "```suggestion", "    for i in range(retries):", "        try:", "```" }, "suggestion prefill")
+vim.api.nvim_buf_set_lines(0, 1, 2, false, { "    for attempt in range(retries):" })
+vim.cmd("wq")
+eq(s.draft.comments[3].body, "```suggestion\n    for attempt in range(retries):\n        try:\n```", "suggestion body")
+eq({ s.draft.comments[3].start_line, s.draft.comments[3].line, s.draft.comments[3].side }, { 4, 5, "RIGHT" }, "suggestion range")
+table.remove(s.draft.comments, 3)
+comments.after_change()
 
 view.set_mode("split")
 eq(s.mode, "split", "split mode")
@@ -87,6 +98,15 @@ s = view.session
 eq(#s.draft.comments, 2, "comments restored")
 eq(view.current_file().filename, "img.png", "resumed on last file")
 eq(s.draft.viewed["img.png"], true, "viewed restored")
+
+-- :w in a review buffer must not error
+vim.cmd("write")
+-- own PR: approve refused locally
+s.meta.viewer = "mike"
+assert(submit.is_own_pr(s), "own pr detected")
+local okp, errp = submit.post("APPROVE")
+assert(not okp and errp:match("own pull request"), "own-PR approve refused")
+s.meta.viewer = "someone-else"
 
 -- submit
 s.draft.body = "LGTM with nits"

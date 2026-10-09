@@ -18,6 +18,7 @@ KEYS (review buffers)                                   *pr_review-keys*
 <Tab>  before/after    gd diff    gs split    gb before    ga after
 ]f [f  files           ]c [c hunks
 gc     comment on line / selection (edit if one exists)
+gC     suggestion: comment pre-filled with a ```suggestion block
 gl     comment list    -  files panel    gm viewed    gS submit    g? help
 
 vim:tw=78:ts=8:ft=help:norl:

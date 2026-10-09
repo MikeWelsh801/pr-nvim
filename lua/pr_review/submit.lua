@@ -14,6 +14,11 @@ local function view()
   return require("pr_review.view")
 end
 
+--- GitHub refuses APPROVE / REQUEST_CHANGES from the PR author.
+function M.is_own_pr(s)
+  return s.meta.viewer ~= nil and s.meta.viewer ~= "" and s.meta.viewer == s.meta.author
+end
+
 --- Build the GitHub review payload from the draft.
 function M.build_payload(s, event)
   local comments = {}
@@ -49,6 +54,9 @@ end
 --- Post the review for `event` using the saved draft. Returns ok, result|error.
 function M.post(event)
   local s = view().session
+  if event ~= "COMMENT" and M.is_own_pr(s) then
+    return false, "GitHub does not allow approving or requesting changes on your own pull request; submit as Comment"
+  end
   local payload = M.build_payload(s, event)
   if event ~= "APPROVE" and not payload.body and not payload.comments then
     return false, "A " .. event:lower() .. " review needs a summary or at least one comment"
@@ -73,10 +81,14 @@ function M.submit()
     return
   end
   local labels = {}
+  local own = M.is_own_pr(s)
   for _, e in ipairs(EVENTS) do
-    labels[#labels + 1] = e.label
+    if not own or e.event == "COMMENT" then
+      labels[#labels + 1] = e.label
+    end
   end
-  vim.ui.select(labels, { prompt = "Submit review as:" }, function(choice)
+  local prompt = own and "Submit review as (your own PR: comment only):" or "Submit review as:"
+  vim.ui.select(labels, { prompt = prompt }, function(choice)
     if not choice then
       return
     end
